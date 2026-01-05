@@ -143,6 +143,122 @@ static void Backspace(String &text)
     }
 }
 
+//code credited to Den Zurin https://gamedev.ru/code/forum/?id=119312&page=2&m=1645259#m21 
+int wtable[64] = {
+  0x0402, 0x0403, 0x201A, 0x0453, 0x201E, 0x2026, 0x2020, 0x2021,
+  0x20AC, 0x2030, 0x0409, 0x2039, 0x040A, 0x040C, 0x040B, 0x040F,
+  0x0452, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+  0x007F, 0x2122, 0x0459, 0x203A, 0x045A, 0x045C, 0x045B, 0x045F,
+  0x00A0, 0x040E, 0x045E, 0x0408, 0x00A4, 0x0490, 0x00A6, 0x00A7,
+  0x0401, 0x00A9, 0x0404, 0x00AB, 0x00AC, 0x00AD, 0x00AE, 0x0407,
+  0x00B0, 0x00B1, 0x0406, 0x0456, 0x0491, 0x00B5, 0x00B6, 0x00B7,
+  0x0451, 0x2116, 0x0454, 0x00BB, 0x0458, 0x0405, 0x0455, 0x0457};
+  
+int utf8_to_win1251(const char* text, char* wtext)
+{
+  int wc, uc;
+  int i, j, k, m;
+  if (!wtext)
+    return 0;
+  i=0;
+  j=0;
+  while (i<strlen(text))
+  {
+    /* read Unicode character */
+    /* read first UTF-8 byte */
+    wc = (unsigned char)text[i++];
+    /* 11111xxx - not symbol (BOM etc) */
+    if (wc>=0xF8)
+    {
+      m = -1;
+    }
+    /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx -> 0x00010000 — 0x001FFFFF */
+    else if (wc>=0xF0)
+    {
+      uc = (wc&0x07); 
+      m = 3;
+    }
+    /* 1110xxxx 10xxxxxx 10xxxxxx -> 0x00000800 — 0x0000FFFF */
+    else if (wc>=0xE0)
+    {
+      uc = (wc&0x0F); 
+      m = 2;
+    }
+    /* 110xxxxx 10xxxxxx -> 0x00000080 — 0x000007FF */
+    else if (wc>=0xC0)
+    {
+      uc = (wc&0x1F); 
+      m = 1;
+    }
+    /* 0xxxxxxx -> 0x00000000 — 0x0000007F */
+    else if (wc<=0x7F)
+    {
+      uc = wc;
+      m = 0;
+    }
+    /* 10xxxxxx - data error! */
+    else
+    {
+      m = -1;
+    }
+    /* read m UTF-8 bytes (10xxxxxx) */
+    k = 1;
+    wc = 0;
+    while (k<=m && wc<=0xBF)
+    {
+      wc = (unsigned char)text[i++];
+      uc <<= 6;
+      uc += (wc&0x3F);
+      k++;
+    }
+    if (wc>0xBF || m<0)
+    {
+      uc = -1;
+    }
+    /* Unicode to Windows-1251 */
+    if (uc<0)
+    {
+      wc = -1;
+    }
+    else if (uc<=0x7F) /* ASCII */
+    {
+      wc = uc;
+    }
+    else if (uc>=0x0410 && uc<=0x042F) /* А-Я */
+    {
+      wc = uc - 0x410 + 0xC0;
+    }
+    else if (uc>=0x0430 && uc<=0x044F) /* а-я */
+    {
+      wc = uc - 0x0430 + 0xE0;
+    }
+    else /* Ђ-ї */
+    {
+      /* search in wtable */
+      k = 0;
+      while (k<64 && wtable[k]!=uc)
+      {
+        k++;
+      }
+      if (k<64)
+      {
+        wc = k + 0x80;
+      }
+      else
+      {
+        wc = '?';
+      }
+    }
+    /* save Windows-1251 character */
+    if (wc>0)
+    {
+      wtext[j++] = (char)wc;
+    }
+  }
+  wtext[j] = 0x00;
+  return 1;
+}
+
 bool GUITextBox::OnKeyPress(const KeyInput &ki)
 {
     switch (ki.Key)
@@ -157,6 +273,13 @@ bool GUITextBox::OnKeyPress(const KeyInput &ki)
     default: break;
     }
 
+    if (ki.UChar > 256){ //code for cyrillic cp1251 input (Windows)
+        char str[500];
+        utf8_to_win1251(ki.Text,str);
+        _text.Append(str); // proper unicode char
+        MarkChanged();
+        return true;
+    }
     if (ki.UChar == 0)
         return false; // not a textual event, don't handle
 
