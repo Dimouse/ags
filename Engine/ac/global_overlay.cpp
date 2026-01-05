@@ -53,11 +53,16 @@ int CreateTextOverlay(int xx, int yy, int wii, int fontid, int text_color, const
 }
 
 void SetTextOverlay(int ovrid, int xx, int yy, int wii, int fontid, int text_color, const char *text) {
-    auto *over = get_overlay(ovrid);
-    if (!over)
-        quit("!SetTextOverlay: invalid overlay ID specified");
+//    auto *over = get_overlay(ovrid);
+//    if (!over)
+//        quit("!SetTextOverlay: invalid overlay ID specified");
 
-    Overlay_SetText(*over, xx, yy, wii, fontid, text_color, text);
+//    Overlay_SetText(*over, xx, yy, wii, fontid, text_color, text);
+    RemoveOverlay(ovrid);
+    const int disp_type = ovrid;
+    int new_ovrid = CreateTextOverlay(xx, yy, wii, fontid, text_color, text, kDisplayTextStyle_TextWindow);
+    if (new_ovrid != ovrid)
+        quit("SetTextOverlay internal error: inconsistent type ids");
 }
 
 void MoveOverlay(int ovrid, int newx,int newy) {
