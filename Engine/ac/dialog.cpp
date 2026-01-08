@@ -1570,6 +1570,13 @@ void DialogOptions::End()
   if (parserActivated) 
   {
     assert(parserInput);
+
+	String ww;
+    int w = find_translated_word_in_dictionary(parserInput->GetText().GetCStr(), &ww);
+    if (w!=-1){
+      parserInput->SetText(ww);
+    }
+	  
     snprintf(play.lastParserEntry, MAX_MAXSTRLEN, "%s", parserInput->GetText().GetCStr());
     ParseText (parserInput->GetText().GetCStr());
     chose = CHOSE_TEXTPARSER;
@@ -2311,3 +2318,4 @@ void RegisterDialogAPI()
 
     ccAddExternalFunctions(dialog_api);
 }
+
