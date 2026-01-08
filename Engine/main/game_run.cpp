@@ -35,6 +35,7 @@
 #include "ac/global_game.h"
 #include "ac/global_gui.h"
 #include "ac/global_region.h"
+#include "ac/global_translation.h"
 #include "ac/gui.h"
 #include "ac/hotspot.h"
 #include "ac/keycode.h"
@@ -64,6 +65,8 @@
 #include "plugin/plugin_engine.h"
 #include "script/script.h"
 #include "script/script_runtime.h"
+#include "util/string.h"
+#include "util/string_compat.h"
 
 using namespace AGS::Common;
 using namespace AGS::Engine;
@@ -634,6 +637,32 @@ bool run_service_key_controls(KeyInput &out_key)
     return true;
 }
 
+int find_translated_word_in_dictionary (const char *lookfor, String *word) {
+    int j;
+    if (game.dict == nullptr)
+        return -1;
+
+    for (j = 0; j < game.dict->num_words; j++) {
+        if (ags_stricmp(lookfor, get_translation(game.dict->word[j])) == 0) {
+            *word = game.dict->word[j];
+            return game.dict->wordnum[j];
+        }
+    }
+    if (lookfor[0] != 0) {
+        // If the word wasn't found, but it ends in 'S', see if there's
+        // a non-plural version
+        const char *ptat = &lookfor[strlen(lookfor)-1];
+        char lastletter = *ptat;
+        if ((lastletter == 's') || (lastletter == 'S') || (lastletter == '\'')) {
+            String singular = lookfor;
+            singular.ClipRight(1);
+            return find_translated_word_in_dictionary(singular.GetCStr(), word);
+        } 
+    }
+    return -1;
+}
+
+
 // Runs default keyboard handling
 static void check_keyboard_controls()
 {
@@ -721,6 +750,13 @@ static void check_keyboard_controls()
 
                 if (guitex->IsActivated()) {
                     guitex->SetActivated(false);
+
+                    String ww;
+                    int w = find_translated_word_in_dictionary(guitex->GetText().GetCStr(), &ww);
+                    if (w!=-1){
+                      guitex->SetText(ww);
+                    }
+                    
                     // FIXME: review this, are we abusing "mouse button" arg here in order to pass a different data?
                     setevent(AGSEvent_GUI(guiIndex, controlIndex, static_cast<eAGSMouseButton>(1)));
                 }
