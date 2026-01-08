@@ -16,6 +16,8 @@
 
 #include "ac/keycode.h"
 
+using AGS::Common::String;
+
 namespace AGS { namespace Engine { class IDriverDependantBitmap; }}
 
 // Loops game frames until certain event takes place (for blocking actions)
@@ -80,6 +82,8 @@ bool run_service_mb_controls(eAGSMouseButton &mbut, Point *mpos = nullptr);
 // Polls few things (exit flag and debugger messages)
 // TODO: refactor this
 void update_polled_stuff();
+
+int find_translated_word_in_dictionary (const char *, String *);
 
 
 #endif // __AGS_EE_MAIN__GAMERUN_H
